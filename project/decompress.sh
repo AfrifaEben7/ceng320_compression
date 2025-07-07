@@ -7,5 +7,10 @@ fi
 orig=$1
 comp=$2
 out=${comp}.restored.csv
-qemu-aarch64 -L /usr/aarch64-linux-gnu ./decompress "$comp" "$out"
+if [ "$(uname -m)" = "aarch64" ]; then
+    ./decompress "$comp" "$out"
+else
+    QEMU_PATH=${QEMU_PATH:-/usr/aarch64-linux-gnu}
+    qemu-aarch64 -L "$QEMU_PATH" ./decompress "$comp" "$out"
+fi
 diff -q "$orig" "$out" && echo "Files match" || echo "Files differ"
