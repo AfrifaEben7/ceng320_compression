@@ -19,40 +19,60 @@ calculate_compression_ratio:
     .global print_ascii_chart
     .type print_ascii_chart, %function
 // void print_ascii_chart(const int32_t *data, size_t size)
+// prints "VALUE: *****" with star count scaled by value/10
 print_ascii_chart:
     stp x29, x30, [sp, -16]!
-    stp x19, x20, [sp, -16]!   // save callee-saved register
+    stp x19, x20, [sp, -16]!
+    stp x21, x22, [sp, -16]!
     mov x29, sp
 
-    mov x19, x0           // preserve data pointer in x19
-    mov x2, #0            // index
-.loop_chart:
-    cmp x2, x1
+    mov x19, x0          // data pointer
+    mov x20, x1          // element count
+    mov x21, #0          // index
+.chart_loop:
+    cmp x21, x20
     b.ge .chart_done
-    ldr w4, [x19, x2, lsl #2]
-    bl print_value         // custom print value
-    add x2, x2, #1
-    b .loop_chart
+    ldr w22, [x19, x21, lsl #2]   // load value
+
+    // print "<value>: "
+    adrp x0, fmt_val
+    add x0, x0, :lo12:fmt_val
+    mov w1, w22
+    bl printf
+
+    // star count = value / 10
+    mov w23, w22
+    mov w24, #10
+    udiv w23, w23, w24
+    cbz w23, .print_newline
+.star_loop:
+    adrp x0, fmt_star
+    add x0, x0, :lo12:fmt_star
+    bl printf
+    sub w23, w23, #1
+    cbnz w23, .star_loop
+
+.print_newline:
+    adrp x0, fmt_nl
+    add x0, x0, :lo12:fmt_nl
+    bl printf
+
+    add x21, x21, #1
+    b .chart_loop
 
 .chart_done:
+    ldp x21, x22, [sp], #16
     ldp x19, x20, [sp], #16
     ldp x29, x30, [sp], #16
     ret
 
-print_value:
-    stp x29, x30, [sp, -16]!
-    mov x29, sp
-    // simply print value using C printf
-    adrp x0, format_str
-    add x0, x0, :lo12:format_str
-    mov x1, x4
-    bl printf
-    ldp x29, x30, [sp], #16
-    ret
-
     .data
-format_str:
-    .asciz "%d\n"
+fmt_val:
+    .asciz "%d: "
+fmt_star:
+    .asciz "*"
+fmt_nl:
+    .asciz "\n"
 
     .text
     .global array_copy
